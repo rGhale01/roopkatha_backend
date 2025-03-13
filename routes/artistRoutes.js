@@ -1,9 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import moment from 'moment';
-import fs from 'fs';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import { ArtistModel } from '../model/Artist.js';
 import { authenticate } from '../middleware/auth.js';
 import { authorise } from '../authorize.js';
@@ -13,110 +12,144 @@ dotenv.config();
 const artistRoute = express.Router();
 artistRoute.use(express.json());
 
-// to register artist and then hashing password using Bcrypt
-artistRoute.post('/register', async (req, res) => {
-    const { name, email, password, role, specialization, image, videoCall } = req.body;
-    const artistFound = await ArtistModel.findOne({ email });
-    if (artistFound) {
-        res.status(409).send({ message: 'Artist already registered' });
-    } else {
-        try {
-            let dateFormat = moment().format('D-MM-YYYY');
+// Artist Registration
+artistRoute.post('/ArtistRegister', async (req, res) => {
+    const { name, email, password, gender, specialization } = req.body;
 
-            bcrypt.hash(password, 5, async function (err, hash) {
-                const data = new ArtistModel({ name, email, password: hash, image, registeredDate: dateFormat, role, specialization, videoCall });
-                await data.save();
-                res.status(201).send({ message: 'Artist Registered' });
-            });
-        } catch (err) {
-            res.status(500).send({ ERROR: err });
+    try {
+        const artistFound = await ArtistModel.findOne({ email });
+
+        if (artistFound) {
+            return res.status(409).json({ message: 'Artist already registered' });
         }
+
+        bcrypt.hash(password, 5, async (err, hash) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error hashing password' });
+            }
+
+            const newArtist = new ArtistModel({
+                name,
+                email,
+                password: hash,
+
+                specialization,
+                role: 'artist'
+            });
+
+            await newArtist.save();
+            res.status(201).json({ message: 'Artist Registered' });
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
-// to let artist login and then create and send token as response
-artistRoute.post('/login', async (req, res) => {
+// Artist Login
+artistRoute.post('/ArtistLogin', async (req, res) => {
     const { email, password } = req.body;
-    let data = await ArtistModel.findOne({ email });
-    if (!data) {
-        return res.send({ message: 'No artist found' });
-    }
+
     try {
-        bcrypt.compare(password, data.password, function (err, result) {
+        const artist = await ArtistModel.findOne({ email });
+
+        if (!artist) {
+            return res.status(401).json({ message: 'No artist found' });
+        }
+
+        bcrypt.compare(password, artist.password, (err, result) => {
             if (result) {
-                var token = jwt.sign({ artistID: data._id }, process.env.key);
-                var refreshtoken = jwt.sign({ artistID: data._id }, process.env.key, { expiresIn: 60 * 1000 });
-                res.status(201).send({
+                const token = jwt.sign({ artistID: artist._id }, process.env.JWT_SECRET);
+                const refreshToken = jwt.sign({ artistID: artist._id }, process.env.JWT_SECRET, { expiresIn: 60 * 1000 });
+
+                res.status(200).json({
                     message: 'Validation done',
-                    token: token,
-                    refresh: refreshtoken,
-                    name: data.name,
-                    id: data._id
+                    token,
+                    refresh: refreshToken,
+                    name: artist.name,
+                    id: artist._id
                 });
             } else {
-                res.status(401).send({ message: 'INVALID credentials' });
+                res.status(401).json({ message: 'INVALID credentials' });
             }
         });
     } catch (err) {
-        res.status(500).send({ ERROR: err });
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
-artistRoute.patch('/update/:id', authorise(['artist', 'admin']), async (req, res) => {
-    const ID = req.params.id;
-    const payload = req.body;
+
+// Update Artist Profile
+artistRoute.patch('/update/:id', authenticate, authorise(['artist', 'admin']), async (req, res) => {
     try {
-        await ArtistModel.findByIdAndUpdate({ _id: ID }, payload);
-        res.send({ message: 'Database modified' });
+        const updatedArtist = await ArtistModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedArtist) {
+            return res.status(404).json({ error: 'Artist not found' });
+        }
+        res.json({ message: 'Profile updated successfully', artist: updatedArtist });
     } catch (err) {
-        console.log(err);
-        res.send({ message: 'error' });
+        console.error('Error updating artist:', err);
+        res.status(500).json({ error: 'Error updating artist' });
     }
 });
 
-artistRoute.delete('/delete/:id', authorise(['artist', 'admin']), async (req, res) => {
-    const ID = req.params.id;
-
+// Delete Artist
+artistRoute.delete('/delete/:id', authenticate, authorise(['artist', 'admin']), async (req, res) => {
     try {
-        await ArtistModel.findByIdAndDelete({ _id: ID });
-        res.send({ message: 'Particular data has been deleted' });
+        const artist = await ArtistModel.findByIdAndDelete(req.params.id);
+        if (!artist) {
+            return res.status(404).json({ error: 'Artist not found' });
+        }
+        res.json({ message: 'Artist deleted successfully' });
     } catch (err) {
-        console.log(err);
-        res.send({ message: 'error' });
+        console.error('Error deleting artist:', err);
+        res.status(500).json({ error: 'Error deleting artist' });
     }
 });
 
+// Get All Artists
 artistRoute.get('/all', async (req, res) => {
     try {
-        let data = await ArtistModel.find();
-        res.status(200).send({ Artists: data });
+        const artists = await ArtistModel.find().select('-password');
+        res.status(200).json({ artists });
     } catch (err) {
-        res.status(500).send({ ERROR: err });
+        console.error('Error fetching artists:', err);
+        res.status(500).json({ error: 'Error fetching artists' });
     }
 });
 
+// Get Artist by ID
 artistRoute.get('/getartist/:id', async (req, res) => {
-    const id = req.params.id;
     try {
-        let data = await ArtistModel.findOne({ _id: id });
-        res.status(200).send({ Artist: data });
+        const artist = await ArtistModel.findById(req.params.id).select('-password');
+        if (!artist) {
+            return res.status(404).json({ error: 'Artist not found' });
+        }
+        res.status(200).json({ artist });
     } catch (err) {
-        res.status(500).send({ ERROR: err });
+        console.error('Error fetching artist:', err);
+        res.status(500).json({ error: 'Error fetching artist' });
     }
 });
 
-artistRoute.use(authenticate);
+// Logout Artist (Token Blacklisting)
+artistRoute.post('/logout', authenticate, async (req, res) => {
+    try {
+        const token = req.headers.authorization;
+        if (!token) {
+            return res.status(400).json({ error: 'No active session found' });
+        }
 
-artistRoute.post('/logout', async (req, res) => {
-    const token = req.headers.authorization;
-    if (token) {
-        const blacklistedData = JSON.parse(fs.readFileSync('./blacklist.json', 'utf-8'));
-        blacklistedData.push(token);
+        let blacklistedTokens = [];
+        if (fs.existsSync('./blacklist.json')) {
+            blacklistedTokens = JSON.parse(fs.readFileSync('./blacklist.json', 'utf-8'));
+        }
+        blacklistedTokens.push(token);
+        fs.writeFileSync('./blacklist.json', JSON.stringify(blacklistedTokens));
 
-        fs.writeFileSync('./blacklist.json', JSON.stringify(blacklistedData));
-        res.send({ message: 'Logout done successfully' });
-    } else {
-        res.send({ message: 'Please login' });
+        res.json({ message: 'Logout successful' });
+    } catch (err) {
+        console.error('Error during logout:', err);
+        res.status(500).json({ error: 'Logout failed' });
     }
 });
 

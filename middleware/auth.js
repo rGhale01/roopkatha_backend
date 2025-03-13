@@ -15,7 +15,7 @@ const authenticate = (req, res, next) => {
         } else {
             let decoded = jwt.verify(token, process.env.key);
             if (decoded) {
-                req.body.userID = decoded.patientID || decoded.doctorID;
+                req.body.userID = decoded.customerID || decoded.artistID;
                 next();
             } else {
                 res.status(401).send({ message: "Oops, You're NOT Authorized" });

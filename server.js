@@ -24,7 +24,7 @@ mongoose.connect(MONGOURL).then(() => {
 
 // redirect routes
 app.use('/customers', customerRoute);
-app.use('/artists', artistRoute);
+app.use('/', artistRoute); // Instead of '/artists'
 app.use('/bookings', bookingRoute);
 
 

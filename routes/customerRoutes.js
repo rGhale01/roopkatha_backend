@@ -13,7 +13,7 @@ customerRoute.use(express.json());
 
 // to register customer and then hashing password using Bcrypt
 customerRoute.post('/register', async (req, res) => {
-    const { name, email, password, role, image } = req.body;
+    const { name, email, password, role } = req.body;
     const customerFound = await CustomerModel.findOne({ email });
     if (customerFound) {
         res.status(409).send({ message: 'Already customer registered' });
@@ -23,7 +23,7 @@ customerRoute.post('/register', async (req, res) => {
                 if (err) {
                     res.status(500).send({ ERROR: err });
                 } else {
-                    const data = new CustomerModel({ name, email, password: hash, image, role });
+                    const data = new CustomerModel({ name, email, password: hash, role });
                     await data.save();
                     res.status(201).send({ message: 'Customer Registered' });
                 }
