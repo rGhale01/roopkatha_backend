@@ -8,10 +8,10 @@ const ArtistSchema = new mongoose.Schema(
         password: { type: String, required: true },
         role: { type: String, default: 'artist' },
         specialization: { type: String, required: true, trim: true },
+        profilePictureUrl: { type: String, required: false, trim: true },  // No validation
     },
     { timestamps: true }
 );
-
 
 const ArtistModel = mongoose.model('Artist', ArtistSchema);
 export { ArtistModel };

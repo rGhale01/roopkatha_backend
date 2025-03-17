@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import multer from 'multer';
 import fs from 'fs';
 import { ArtistModel } from '../model/Artist.js';
 import { authenticate } from '../middleware/auth.js';
@@ -12,12 +13,23 @@ dotenv.config();
 const artistRoute = express.Router();
 artistRoute.use(express.json());
 
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
 
-// to register customer and then hashing password using Bcrypt
-artistRoute.post('/ArtistRegister', async (req, res) => {
+// Register artist with profile picture upload
+artistRoute.post('/ArtistRegister', upload.single('profilePicture'), async (req, res) => {
     const { name, email, password, role, specialization } = req.body;
-    const artistRoute = await ArtistModel.findOne({ email });
-    if (artistRoute) {
+    const profilePictureUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const artist = await ArtistModel.findOne({ email });
+    if (artist) {
         res.status(409).send({ message: 'Already Artist registered' });
     } else {
         try {
@@ -25,7 +37,7 @@ artistRoute.post('/ArtistRegister', async (req, res) => {
                 if (err) {
                     res.status(500).send({ ERROR: err });
                 } else {
-                    const data = new ArtistModel({ name, email, password: hash, role, specialization });
+                    const data = new ArtistModel({ name, email, password: hash, role, specialization, profilePictureUrl });
                     await data.save();
                     res.status(201).send({ message: 'Artist Registered' });
                 }
@@ -35,6 +47,7 @@ artistRoute.post('/ArtistRegister', async (req, res) => {
         }
     }
 });
+
 // Artist Login
 artistRoute.post('/ArtistLogin', async (req, res) => {
     const { email, password } = req.body;
@@ -67,10 +80,14 @@ artistRoute.post('/ArtistLogin', async (req, res) => {
     }
 });
 
-// Update Artist Profile
-artistRoute.patch('/update/:id', authenticate, authorise(['artist', 'admin']), async (req, res) => {
+// Update artist profile with profile picture upload
+artistRoute.patch('/update/:id', authenticate, authorise(['artist', 'admin']), upload.single('profilePicture'), async (req, res) => {
+    const updateData = req.body;
+    if (req.file) {
+        updateData.profilePictureUrl = `/uploads/${req.file.filename}`;
+    }
     try {
-        const updatedArtist = await ArtistModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedArtist = await ArtistModel.findByIdAndUpdate(req.params.id, updateData, { new: true });
         if (!updatedArtist) {
             return res.status(404).json({ error: 'Artist not found' });
         }
@@ -107,13 +124,25 @@ artistRoute.get('/all', async (req, res) => {
 });
 
 // Get Artist by ID
-artistRoute.get('/getartist/:id', async (req, res) => {
+artistRoute.get('/artists/:id', async (req, res) => {
     try {
         const artist = await ArtistModel.findById(req.params.id).select('-password');
         if (!artist) {
             return res.status(404).json({ error: 'Artist not found' });
         }
-        res.status(200).json({ artist });
+
+        // Use the Android emulator's loopback address
+        const fullUrl = 'http://10.0.2.2:8000';
+        const profilePictureUrl = artist.profilePictureUrl ? fullUrl + artist.profilePictureUrl : null;
+
+        // Log the profile picture URL
+        console.log('Profile Picture URL:', profilePictureUrl);
+
+        res.status(200).json({
+            name: artist.name,
+            profilePictureUrl: profilePictureUrl,  // Return the full profile picture URL
+            specialization: artist.specialization 
+        });
     } catch (err) {
         console.error('Error fetching artist:', err);
         res.status(500).json({ error: 'Error fetching artist' });
@@ -141,5 +170,8 @@ artistRoute.post('/logout', authenticate, async (req, res) => {
         res.status(500).json({ error: 'Logout failed' });
     }
 });
+
+// Serve uploaded files
+artistRoute.use('/uploads', express.static('uploads'));
 
 export { artistRoute };
