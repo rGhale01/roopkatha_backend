@@ -19,39 +19,36 @@ bookingRoute.get('/bookings', async (req, res) => {
     }
 });
 
-// Get bookings for a specific artist
-bookingRoute.get('/artist/:id', async (req, res) => {
-    const ID = req.params.id;
+// Get available time slots for a specific artist and date
+bookingRoute.get('/available-slots', async (req, res) => {
+    const { artistId, date } = req.query;
     try {
-        let data = await BookingModel.find({ artistId: ID }).populate('artistId customerId');
-        res.status(200).send({ Bookings: data });
-    } catch (err) {
-        res.status(500).send({ ERROR: err });
-    }
-});
+        const existingBookings = await BookingModel.find({ artistId, date });
 
-// Get bookings for a specific customer
-bookingRoute.get('/customer/:id', async (req, res) => {
-    const ID = req.params.id;
-    try {
-        let data = await BookingModel.find({ customerId: ID }).populate('artistId customerId');
-        res.status(200).send({ Bookings: data });
+        const allSlots = [
+            "09:00", "10:00", "11:00", "12:00",
+            "13:00", "14:00", "15:00", "16:00",
+            "17:00", "18:00"
+        ];
+
+        const bookedSlots = existingBookings.map(booking => booking.startTime);
+        const availableSlots = allSlots.filter(slot => !bookedSlots.includes(slot));
+
+        res.status(200).send({ availableSlots });
     } catch (err) {
         res.status(500).send({ ERROR: err });
     }
 });
 
 // Add a new booking
-bookingRoute.post('/add', async (req, res) => {
-    const { artistId, date, startTime, endTime, customerId } = req.body;
+bookingRoute.post('/newBooking', async (req, res) => {
+    const { artistId, date, startTime, customerId } = req.body;
+    
     try {
         const isSlotBooked = await BookingModel.exists({
             artistId,
             date,
-            $or: [
-                { startTime: { $lt: endTime, $gte: startTime } },
-                { endTime: { $gt: startTime, $lte: endTime } }
-            ]
+            startTime
         });
 
         if (isSlotBooked) {
@@ -62,8 +59,7 @@ bookingRoute.post('/add', async (req, res) => {
             artistId,
             customerId,
             date,
-            startTime,
-            endTime
+            startTime
         });
 
         await booking.save();

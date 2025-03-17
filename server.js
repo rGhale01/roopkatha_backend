@@ -28,123 +28,8 @@ app.use('/', artistRoute); // Instead of '/artists'
 app.use('/bookings', bookingRoute);
 
 
-// import User from "../model/User";
-// import Booking from "../model/Booking";
-// import Artist from "../model/Artist";
-// import Service from "../model/Service";
 
-
-// const bcrypt = require("bcryptjs");
-
-// app.use(express.urlencoded({extended:true}))
-// //register
-// // app.post('/register', async(req, res)=> {
-// //   const {email, password} = req.body;
-// //   const hashedPassword = await bcrypt.hash(password, 10);
-  
-// //   try{
-// //     const newUser = new User({email, password: hashedPassword});
-// //     await newUser.save();
-// //     res.status(201).json({message: 'User registererd'});
-// //   } catch(err){
-// //     res.status(400).json({error: 'User Alreafy Exist'});
-// //   }
-// // });
-
-
-
-// // login
-// // app.post('/login', async(req, res)=> {
-// //   const {email, password} = req.body;
-  
-// //   try{
-// //     const user = await User.findOne({email});
-// //     if(!user) return res.status(404).json({error: 'User not found'});
-
-// //     const isMatch = await bcrypt.compare(password, user.password);
-// //     if(!isMatch) return res.status(400).json({error: "Invalid Credentials"});
-
-// //     const token = jwt.sign({id: user._id},SECRET_KEY, {expiresIN: '1h'});
-// //     res.json({token});
-
-// //   } catch(err){
-// //     res.status(500).json({error: 'Servere error'});
-// //   }
-// // });
-
-// // register routes
-// app.post('/register',async (req, res)=> {
-//   const{name, pass } = req.body;
-//   try{
-//       if(!name || !pass)
-//       {
-//         return res.status(400).json({ msg: 'please fiil all the dfiel'});
-//       }
-//     let User = await User.findOne({name, pass});
-//     if(User){
-//       return res.status(400).json({msg: 'user alerdy exixts'});
-//     }
-//     User = new  User({
-//       name,
-//       pass
-//     });
-
-//     await User.save();
-//     res.status(200).json({msg: 'Success'});
-//   }
-//   catch(err){
-//     res.status(500).json({msg: 'Server Error'});
-//   }
-
-// });
-
-// // login routes
-
-// app.post('/login',async (req, res)=> {
-//   const{name, pass } = req.body;
-//   try{
-//       if(!name || !pass)
-//       {
-//         return res.status(400).json({ msg: 'please fiil all the dfiel'});
-//       }
-//     let User = await User.findOne({name, pass});
-//     if(User){
-//       return res.status(400).json({msg: 'Invalid Credentials'});
-//     }
-    
-//     res.status(200).json({msg: 'Success', userid:User_id});
-//   }
-//   catch(err){
-//     res.status(500).json({msg: 'Server Error'});
-//   }
-
-// });
-
-
-// // login artist
-
-// app.post('/loginArtist',async (req, res)=> {
-//   const{name, pass } = req.body;
-//   try{
-//       if(!name || !pass)
-//       {
-//         return res.status(400).json({ msg: 'please fiil all the dfiel'});
-//       }
-//     let User = await Artist.findOne({name, pass});
-//     if(User){
-//       return res.status(400).json({msg: 'Invalid Credentials'});
-//     }
-    
-//     res.status(200).json({msg: 'Success', userid:User_id});
-//   }
-//   catch(err){
-//     res.status(500).json({msg: 'Server Error'});
-//   }
-
-// });
-
-
-// // fetch artist by category
+// fetch artist by category
 // app.get('/category' , async (req, res)=>{
 //   const {category} = req.params;
 
@@ -169,7 +54,7 @@ app.use('/bookings', bookingRoute);
 // });
 
 
-// // booking route
+// booking route
 
 // app.post('/bookAppointment', async (req, res)=>{
 //   const {name} = req.body;
@@ -203,7 +88,7 @@ app.use('/bookings', bookingRoute);
 
 // });
 
-// //fetch by customer name
+//fetch by customer name
 // app.get('/appointment:cID', async (req, res)=>{
 //   const {cID} = req.params;
 
@@ -229,7 +114,7 @@ app.use('/bookings', bookingRoute);
 // });
 
 
-// //fetch by Artist name and ststus booked
+//fetch by Artist name and ststus booked
 // app.get('/appointment:artistId', async (req, res)=>{
 //   const {artistId} = req.params;
 
@@ -254,7 +139,7 @@ app.use('/bookings', bookingRoute);
 
 // });
 
-// // update appointment to done
+// update appointment to done
 // app.put('/bookingStatus/_id', async(req, res)=>{
 
 //   const {_id} = req.params;

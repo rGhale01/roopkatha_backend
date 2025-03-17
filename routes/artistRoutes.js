@@ -12,39 +12,29 @@ dotenv.config();
 const artistRoute = express.Router();
 artistRoute.use(express.json());
 
-// Artist Registration
+
+// to register customer and then hashing password using Bcrypt
 artistRoute.post('/ArtistRegister', async (req, res) => {
-    const { name, email, password, gender, specialization } = req.body;
-
-    try {
-        const artistFound = await ArtistModel.findOne({ email });
-
-        if (artistFound) {
-            return res.status(409).json({ message: 'Artist already registered' });
-        }
-
-        bcrypt.hash(password, 5, async (err, hash) => {
-            if (err) {
-                return res.status(500).json({ error: 'Error hashing password' });
-            }
-
-            const newArtist = new ArtistModel({
-                name,
-                email,
-                password: hash,
-
-                specialization,
-                role: 'artist'
+    const { name, email, password, role, specialization } = req.body;
+    const artistRoute = await ArtistModel.findOne({ email });
+    if (artistRoute) {
+        res.status(409).send({ message: 'Already Artist registered' });
+    } else {
+        try {
+            bcrypt.hash(password, 5, async function (err, hash) {
+                if (err) {
+                    res.status(500).send({ ERROR: err });
+                } else {
+                    const data = new ArtistModel({ name, email, password: hash, role, specialization });
+                    await data.save();
+                    res.status(201).send({ message: 'Artist Registered' });
+                }
             });
-
-            await newArtist.save();
-            res.status(201).json({ message: 'Artist Registered' });
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Internal Server Error' });
+        } catch (err) {
+            res.status(500).send({ ERROR: err });
+        }
     }
 });
-
 // Artist Login
 artistRoute.post('/ArtistLogin', async (req, res) => {
     const { email, password } = req.body;
@@ -76,7 +66,6 @@ artistRoute.post('/ArtistLogin', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-
 
 // Update Artist Profile
 artistRoute.patch('/update/:id', authenticate, authorise(['artist', 'admin']), async (req, res) => {
