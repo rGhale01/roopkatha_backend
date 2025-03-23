@@ -6,8 +6,6 @@ const ArtistSchema = new mongoose.Schema(
         name: { type: String, required: true, trim: true },
         email: { type: String, required: true, unique: true, trim: true },
         password: { type: String, required: true },
-        role: { type: String, default: 'artist' },
-        specialization: { type: String, required: true, trim: true },
         profilePictureUrl: { type: String, required: false, trim: true },  // No validation
     },
     { timestamps: true }

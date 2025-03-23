@@ -1,18 +1,16 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const ServiceSchema = mongoose.Schema(
-
+const ServiceSchema = new mongoose.Schema(
     {
-    service_id: { type: String, required: true, unique: true },
-    service_name: { type: String, required: true },
-    service_description: { type: String },
-    duration:{type: Number, required: true},
-    image: {type: String, required: true},
-    }, 
-    {
-        timestamps: true,
-    }
+        serviceID: { type: mongoose.Schema.Types.ObjectId, unique: true, default: () => new mongoose.Types.ObjectId() },
+        artistID: { type: mongoose.Schema.Types.ObjectId},
+        name: { type: String, required: true, trim: true },
+        description: { type: String, trim: true },
+        price: { type: Number, required: true },
+        duration: { type: Number, required: true } // Duration in minutes
+    },
+    { timestamps: true }
 );
 
-const Service = mongoose.model("Service", ServiceSchema, 'services');
-module.exports = Service;
+const ServiceModel = mongoose.model("service", ServiceSchema);
+export default ServiceModel;

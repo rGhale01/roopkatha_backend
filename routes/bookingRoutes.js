@@ -1,16 +1,15 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { BookingModel } from '../model/Booking.js';
+import BookingModel from '../model/Booking.js';
 import { authenticate } from '../middleware/auth.js';
 
 dotenv.config();
 
 const bookingRoute = express.Router();
 bookingRoute.use(express.json());
-bookingRoute.use(authenticate);
 
 // Get all bookings
-bookingRoute.get('/bookings', async (req, res) => {
+bookingRoute.get('/allBookings', async (req, res) => {
     try {
         let data = await BookingModel.find().populate('customerId artistId');
         res.status(200).send({ Bookings: data });
