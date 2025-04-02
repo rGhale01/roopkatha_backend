@@ -11,7 +11,7 @@ bookingRoute.use(express.json());
 // Get all bookings
 bookingRoute.get('/allBookings', async (req, res) => {
     try {
-        let data = await BookingModel.find().populate('customerId artistId');
+        let data = await BookingModel.find().populate('customerID serviceID availabilityID');
         res.status(200).send({ Bookings: data });
     } catch (err) {
         res.status(404).send({ ERROR: err });
@@ -41,30 +41,21 @@ bookingRoute.get('/available-slots', async (req, res) => {
 
 // Add a new booking
 bookingRoute.post('/newBooking', async (req, res) => {
-    const { artistId, date, startTime, customerId } = req.body;
-    
+    const { customerID, availabilityID, serviceID, price, paymentMethod } = req.body;
+
     try {
-        const isSlotBooked = await BookingModel.exists({
-            artistId,
-            date,
-            startTime
-        });
-
-        if (isSlotBooked) {
-            return res.status(409).send({ error: 'Time slot not available. Please choose a different time.' });
-        }
-
         const booking = new BookingModel({
-            artistId,
-            customerId,
-            date,
-            startTime
+            customerID,
+            availabilityID,
+            serviceID,
+            price,
+            paymentMethod
         });
 
         await booking.save();
-        res.send({ message: 'Booking confirmed successfully' });
+        res.status(201).send({ bookingID: booking._id });
     } catch (error) {
-        console.log(error);
+        console.error('Error during booking creation:', error.message || error);
         res.status(500).send({ error: 'An error occurred while booking the service' });
     }
 });

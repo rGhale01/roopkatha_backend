@@ -1,23 +1,24 @@
-function errorHandler(err, req, res, next) {
-    if (typeof err === "string") {
-      // custom application error
-      return res.status(400).json({ message: err });
+import { DEBUG_MODE } from '../config';
+import { ValidationError } from 'joi';
+import CustomErrorHandler from '../services/CustomErrorHandler';
+const errorHandler = (err, req, res, next) => {
+    let statusCode = 500;
+    let data = {
+        message: 'Internal server error',
+        ...(DEBUG_MODE === 'true' && { originalError: err.message })
     }
-  
-    if (err.name === "ValidationError") {
-      // mongoose validation error
-      return res.status(400).json({ message: err.message });
+    if(err instanceof ValidationError){
+        statusCode = 422;
+        data = {
+            message: err.message
+        }
     }
-  
-    if (err.name === "UnauthorizedError") {
-      // jwt authentication error
-      return res.status(401).json({ message: "Token not valid" });
+    if(err instanceof CustomErrorHandler) {
+        statusCode = err.status;
+        data = {
+            message: err.message
+        }
     }
-  
-    // default to 500 server error
-    return res.status(500).json({ message: err.message });
-  }
-  
-  module.exports = {
-    errorHandler,
-  };
+    return res.status(statusCode).json(data);
+}
+export default errorHandler;

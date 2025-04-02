@@ -50,11 +50,11 @@ paymentRoute.post("/initialize-khalti", async (req, res) => {
 
     res.json({
       success: true,
-      bookingData,
+      bookingID: bookingData._id,
       payment: paymentInitiate,
     });
   } catch (error) {
-    console.error("Error during Khalti payment initialization:", error);
+    console.error("Error during Khalti payment initialization:", error.message || error);
     res.status(500).json({
       success: false,
       error: error.message || error,

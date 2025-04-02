@@ -62,6 +62,19 @@ customerRoute.post('/login', async (req, res) => {
     }
 });
 
+customerRoute.get('/name/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const customer = await CustomerModel.findById(id);
+        if (!customer) {
+            return res.status(404).send({ message: 'Customer not found' });
+        }
+        res.status(200).send({ name: customer.name });
+    } catch (err) {
+        res.status(500).send({ error: err });
+    }
+});
+
 // implementation of Role based authorization - either Customer or Admin can only modify changes in their information
 customerRoute.patch('/update/:id', authorise(['customer', 'admin']), async (req, res) => {
     const ID = req.params.id;

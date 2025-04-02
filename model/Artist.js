@@ -7,6 +7,11 @@ const ArtistSchema = new mongoose.Schema(
         email: { type: String, required: true, unique: true, trim: true },
         password: { type: String, required: true },
         profilePictureUrl: { type: String, required: false, trim: true },  // No validation
+        otp: { type: String, required: false },  // Ensure this field is included
+        isVerified: { type: Boolean, default: false },
+        KYCVerified: { type: Boolean, default: false },
+        citizenshipFilePath: { type: String, required: false },
+        panFilePath: { type: String, required: false },
     },
     { timestamps: true }
 );
