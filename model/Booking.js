@@ -1,23 +1,44 @@
-// This file contains the schema for the Booking collection in the database
-// The Booking collection will store the details of all the bookings made by customers for services provided by artists
-// The Booking collection will have the following fields:
 import mongoose from 'mongoose';
 
-const BookingSchema = new mongoose.Schema(
-    {
-        bookingID: { type: mongoose.Schema.Types.ObjectId, unique: true, default: () => new mongoose.Types.ObjectId() },
-        customerID: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Customer' },
-        availabilityID: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Availability' },
-        serviceID: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Service' },
-        price: { type: Number, required: true }, // This will be set based on the serviceID during booking creation
-        paymentStatus: { type: String, required: true, enum: ['Pending', 'Completed', 'Failed'], default: 'Pending' },
-        bookingStatus: { type: String, required: true, enum: ['Pending', 'Booked', 'Completed', 'Cancelled'], default: 'Pending' },
-        paymentMethod: { type: String, required: true, enum: ["Khalti"] },
-        bookingDate: { type: Date, default: Date.now },
+const bookingSchema = new mongoose.Schema({
+    customerID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Customer',
+        required: true
     },
-    { timestamps: true }
-);
+    artistID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Artist',
+        required: true
+    },
+    serviceID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Service',
+        required: true
+    },
+    availabilityID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Availability',
+        required: true
+    },
+    price: {
+        type: Number,
+        required: true
+    },
+    paymentMethod: {
+        type: String,
+        required: true
+    },
+    bookingStatus: {
+        type: String,
+        default: 'Pending'
+    },
+    paymentStatus: {
+        type: String,
+        default: 'Pending'
+    }
+}, { timestamps: true });
 
-const BookingModel = mongoose.model('Booking', BookingSchema);
+const Booking = mongoose.model('Booking', bookingSchema);
 
-export default BookingModel;
+export default Booking;

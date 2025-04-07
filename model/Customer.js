@@ -7,7 +7,9 @@ const CustomerSchema = new mongoose.Schema(
         password: { type: String, required: true },
         role: { type: String, default: 'customer', trim: true },
         otp: { type: String, required: false },  // Ensure this field is included
-        isVerified: { type: Boolean, default: false }
+        isVerified: { type: Boolean, default: false },
+        phoneNo: {type: Number, required: false }
+        
     },
     { timestamps: true }
 );

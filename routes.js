@@ -7,7 +7,10 @@ import {
     deleteArtist,
     getAllArtists,
     getArtistById,
-    uploadKYC, getUnverifiedArtists, verifyArtist,getVerifyArtistById,
+    uploadKYC, 
+    getUnverifiedArtists, 
+    verifyArtist,
+    getVerifyArtistById,
     logout as artistLogout
 } from './controllers/artistAuthController.js'; // Import the artist controller functions
 
@@ -19,8 +22,41 @@ import {
     deleteCustomer,
     getAllCustomers,
     getCustomerById,
+    getCustomerDetails,
     logout as customerLogout
 } from './controllers/customerController.js'; // Import the customer controller functions
+
+import {
+    createAvailability,
+    getAvailabilityByArtistId,
+    getAvailabilityByServiceId,
+    updateAvailability,
+    deleteAvailability,
+    getAllAvailability
+} from './controllers/availabilityController.js'; // Import the availability controller functions
+
+import {
+    createService,
+    getAllServices,
+    getServicesByArtistId,
+    getServiceById,
+    updateService,
+    deleteService
+} from './controllers/serviceController.js'; // Import the service controller functions
+
+import {
+    getAllBookings,
+    getAvailableSlots,
+    createBooking,
+    updateBooking,
+    deleteBooking,
+    getAllBookingsForArtist,
+} from './controllers/bookingController.js'; // Corrected the import path
+
+import {
+    initializeKhalti,
+    completeKhaltiPayment
+} from './controllers/paymentController.js'; // Import the payment controller functions
 
 import RegisterValidator from './validator/register-validator.js';
 import LoginValidator from './validator/login-validator.js';
@@ -28,6 +64,7 @@ import VerifyOTPValidator from './validator/verify-otp-validator.js';
 import KYCValidator from './validator/kycValidator.js';
 import CustomerAuthMiddleware from './middleware/customerAuthMiddleware.js'; // Import the CustomerAuthMiddleware
 import multer from 'multer';
+
 const upload = multer({ dest: 'uploads/' });
 const router = express.Router();
 
@@ -54,7 +91,6 @@ router.put('/verify/:id', verifyArtist);
 // test this route
 router.get('/Verify/:id', getVerifyArtistById);
 
-
 // Define customer routes and apply validators
 router.post('/customer/CustomerRegister', RegisterValidator.middleware, customerRegister);
 router.post('/customer/verifyOTP', VerifyOTPValidator.middleware, customerVerifyOTP);
@@ -64,5 +100,34 @@ router.delete('/customer/delete/:id', CustomerAuthMiddleware, deleteCustomer);
 router.get('/customer/all', CustomerAuthMiddleware, getAllCustomers);
 router.get('/customer/:id', CustomerAuthMiddleware, getCustomerById);
 router.post('/customer/logout', CustomerAuthMiddleware, customerLogout);
+router.get('/customer/:id', getCustomerDetails);
+
+// Define availability routes
+router.post('/availability/create', createAvailability);
+router.get('/availability/artist/:artistId', getAvailabilityByArtistId);
+router.get('/availability/service/:serviceId', getAvailabilityByServiceId);
+router.patch('/availability/update/:id', updateAvailability);
+router.delete('/availability/delete/:id', deleteAvailability);
+router.get('/availability/all', getAllAvailability);
+
+// Define service routes
+router.post('/service/create', createService);
+router.get('/service/all', getAllServices);
+router.get('/service/artist/:artistId', getServicesByArtistId);
+router.get('/service/:id', getServiceById);
+router.patch('/service/update/:id', updateService);
+router.delete('/service/delete/:id', deleteService);
+
+// Define booking routes
+router.get('/bookings', getAllBookings); // Corrected from bookingRoute to router
+router.get('/bookings/artist/:artistId', getAllBookingsForArtist); // Corrected from bookingRoute to router
+router.get('/available-slots', getAvailableSlots); // Corrected from bookingRoute to router
+router.post('/newBooking', createBooking); // Corrected from bookingRoute to router
+router.patch('/update/:id', updateBooking); // Corrected from bookingRoute to router
+router.delete('/delete/:id', deleteBooking); // Corrected from bookingRoute to router
+
+// Define payment routes
+router.post('/payment/initialize-khalti', initializeKhalti);
+router.get('/payment/complete-khalti-payment', completeKhaltiPayment);
 
 export default router;

@@ -209,6 +209,23 @@ export const getCustomerById = async (req, res) => {
     }
 };
 
+export const getCustomerDetails = async (req, res) => {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) return res.status(400).json({ error: "Invalid Customer ID" });
+
+    try {
+        const customer = await CustomerModel.findById(id).select('name phoneNo');
+        if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+        return res.status(200).json({ name: customer.name, phoneNo: customer.phoneNo });
+    } catch (err) {
+        console.error('Error fetching customer details:', err);
+        return res.status(500).json({ error: 'Error fetching customer details' });
+    }
+};
+
+
+
 export const logout = async (req, res) => {
     try {
       const token = req.headers.authorization?.split(' ')[1]; // Extract token

@@ -8,7 +8,7 @@ const AvailabilitySchema = new mongoose.Schema(
         date: { type: Date, required: true },
         startTime: { type: String, required: true }, // e.g., "13:00"
         endTime: { type: String, required: true },   // e.g., "15:00"
-        status: { type: String, required: true, enum: ['Available','Booked'], default: 'Available' }
+        status: { type: String, required: true, enum: ['Available', 'Booked'], default: 'Available' }
     },
     { timestamps: true }
 );
