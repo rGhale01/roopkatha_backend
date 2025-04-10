@@ -15,11 +15,15 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 // Controller functions
 export const register = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, email, password, confirmPassword, DOB, phoneNo, gender } = req.body;
 
-    if (!name || !email || !password) {
-        return res.status(400).json({ error: "All fields are required" });
+    if (password !== confirmPassword) {
+        return res.status(400).json({ error: "Passwords do not match" });
     }
+
+    if (!name || !email || !password || !DOB || !phoneNo || !gender) {
+    }
+        
 
     const profilePictureUrl = req.file 
         ? `http://10.0.2.2:8000/uploads/${req.file.filename}`
@@ -41,13 +45,16 @@ export const register = async (req, res) => {
         console.log('Generated OTP:', otp);  // Debug log for OTP
         const hashedPassword = await bcrypt.hash(password, 10); // Use a standard salt rounds value
 
-        // Create the artist object with otp field
+        // Create the artist object with new fields
         artist = new ArtistModel({
             name,
             email,
             password: hashedPassword,
             profilePictureUrl,
-            otp
+            otp,
+            DOB, // Added DOB
+            phoneNo, // Added phoneNo
+            gender, // Added gender
         });
 
         await artist.save();
@@ -152,6 +159,9 @@ export const login = async (req, res) => {
                 isVerified: artist.isVerified,
                 KYCVerified: artist.KYCVerified,
                 artistID: artist.artistID,
+                DOB: artist.DOB, // Added DOB
+                phoneNo: artist.phoneNo, // Added phoneNo
+                gender: artist.gender, // Added gender
                 createdAt: artist.createdAt,
                 updatedAt: artist.updatedAt,
             },
@@ -271,7 +281,7 @@ export const logout = async (req, res) => {
 
     const updateData = {};
     if (req.files.citizenship) updateData.citizenshipFilePath = `http://localhost:8000/uploads/${req.files.citizenship[0].filename}`;
-    if (req.files.pan) updateData.panFilePath = `http://localhost:8000/${req.files.pan[0].filename}`;
+    if (req.files.pan) updateData.panFilePath = `http://localhost:8000/uploads/${req.files.pan[0].filename}`;
 
     try {
         const updatedArtist = await ArtistModel.findByIdAndUpdate(id, updateData, { new: true });
@@ -332,6 +342,26 @@ export const verifyArtist = async (req, res) => {
     } catch (err) {
         console.error('Error verifying artist:', err);
         return res.status(500).json({ error: 'Error verifying artist' });
+    }
+};
+
+export const getTotalVerifiedArtists = async (req, res) => {
+    try {
+        const totalVerifiedArtists = await ArtistModel.countDocuments({ KYCVerified: true });
+        return res.status(200).json({ totalVerifiedArtists });
+    } catch (err) {
+        console.error('Error fetching total verified artists:', err);
+        return res.status(500).json({ error: 'Error fetching total verified artists' });
+    }
+};
+
+export const getTotalUnverifiedArtists = async (req, res) => {
+    try {
+        const totalUnverifiedArtists = await ArtistModel.countDocuments({ KYCVerified: false });
+        return res.status(200).json({ totalUnverifiedArtists });
+    } catch (err) {
+        console.error('Error fetching total unverified artists:', err);
+        return res.status(500).json({ error: 'Error fetching total unverified artists' });
     }
 };
 

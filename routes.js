@@ -1,4 +1,8 @@
 import express from 'express';
+import path from 'node:path';
+import fs from 'node:fs';
+import multer from 'multer';
+
 import {
     register as artistRegister,
     verifyOTP as artistVerifyOTP,
@@ -10,21 +14,23 @@ import {
     uploadKYC, 
     getUnverifiedArtists, 
     verifyArtist,
+    getTotalVerifiedArtists,
+    getTotalUnverifiedArtists,
     getVerifyArtistById,
     logout as artistLogout
-} from './controllers/artistAuthController.js'; // Import the artist controller functions
+} from './controllers/artistAuthController.js';
 
 import {
     register as customerRegister,
     verifyOTP as customerVerifyOTP,
     login as customerLogin,
-    updateProfile as updateCustomerProfile,
+    updateCustomerProfile,
     deleteCustomer,
     getAllCustomers,
     getCustomerById,
-    getCustomerDetails,
-    logout as customerLogout
-} from './controllers/customerController.js'; // Import the customer controller functions
+    getTotalCustomers,
+    logout as customerLogout,
+} from './controllers/customerController.js';
 
 import {
     createAvailability,
@@ -33,7 +39,7 @@ import {
     updateAvailability,
     deleteAvailability,
     getAllAvailability
-} from './controllers/availabilityController.js'; // Import the availability controller functions
+} from './controllers/availabilityController.js';
 
 import {
     createService,
@@ -42,7 +48,7 @@ import {
     getServiceById,
     updateService,
     deleteService
-} from './controllers/serviceController.js'; // Import the service controller functions
+} from './controllers/serviceController.js';
 
 import {
     getAllBookings,
@@ -51,58 +57,105 @@ import {
     updateBooking,
     deleteBooking,
     getAllBookingsForArtist,
-} from './controllers/bookingController.js'; // Corrected the import path
+    getBookingsForCustomer,
+    getCanceledBookingsForCustomer
+} from './controllers/bookingController.js';
 
 import {
     initializeKhalti,
     completeKhaltiPayment
-} from './controllers/paymentController.js'; // Import the payment controller functions
+} from './controllers/paymentController.js';
 
 import RegisterValidator from './validator/register-validator.js';
 import LoginValidator from './validator/login-validator.js';
 import VerifyOTPValidator from './validator/verify-otp-validator.js';
 import KYCValidator from './validator/kycValidator.js';
-import CustomerAuthMiddleware from './middleware/customerAuthMiddleware.js'; // Import the CustomerAuthMiddleware
-import multer from 'multer';
+import CustomerAuthMiddleware from './middleware/customerAuthMiddleware.js';
 
-const upload = multer({ dest: 'uploads/' });
 const router = express.Router();
 
-// Define artist routes and apply validators
+// Ensure uploads directory exists
+const uploadsDir = 'uploads/';
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer storage
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    }
+});
+
+// File filter function
+const fileFilter = (req, file, cb) => {
+    console.log('MIME Type:', file.mimetype); // Keep debugging log
+    // Note: image/jpg is not a standard MIME type, but some devices/apps might use it
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png' || file.mimetype === 'image/jpg') {
+        cb(null, true);
+    } else {
+        // Return an error that will be properly caught
+        return cb(new Error('Only JPEG and PNG files are allowed'), false);
+    }
+};
+
+// Create upload middleware
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10000000 }, // 10MB limit
+    fileFilter: fileFilter
+});
+
+// Error handling middleware for Multer errors
+const handleMulterError = (err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        // A Multer error occurred when uploading
+        return res.status(400).json({ error: err.message });
+    } else if (err) {
+        // An unknown error occurred when uploading
+        return res.status(400).json({ error: err.message });
+    }
+    // No errors
+    next();
+};
+
+// Artist routes
 router.post('/artist/ArtistRegister', RegisterValidator.middleware, artistRegister);
 router.post('/artist/verifyOTP', VerifyOTPValidator.middleware, artistVerifyOTP);
 router.post('/artist/ArtistLogin', LoginValidator.middleware, artistLogin);
-router.patch('/artist/update/:id', updateArtistProfile);
+router.patch('/artist/update/:id', upload.single('profilePicture'), handleMulterError, updateArtistProfile);
 router.delete('/artist/delete/:id', deleteArtist);
 router.get('/artist/all', getAllArtists);
 router.get('/artist/:id', getArtistById);
 router.post('/artist/logout', artistLogout);
 router.use('/artist/uploads', express.static('uploads'));
-
-// Configure multer for file uploads
-router.post('/upload-kyc/:id', upload.fields([{ name: 'citizenship', maxCount: 1 }, { name: 'pan', maxCount: 1 }]),  KYCValidator.middleware, uploadKYC);
-
-// Get unverified artists route (test this)
+router.get('/artists/total-verified', getTotalVerifiedArtists);
+router.get('/artists/total-unverified', getTotalUnverifiedArtists);
+router.post('/upload-kyc/:id', upload.fields([
+    { name: 'citizenship', maxCount: 1 }, 
+    { name: 'pan', maxCount: 1 }
+]), handleMulterError, KYCValidator.middleware, uploadKYC);
 router.get('/unverified', getUnverifiedArtists);
-
-// Verify artist route (test this)
 router.put('/verify/:id', verifyArtist);
-
-// test this route
 router.get('/Verify/:id', getVerifyArtistById);
 
-// Define customer routes and apply validators
+// Customer routes
 router.post('/customer/CustomerRegister', RegisterValidator.middleware, customerRegister);
 router.post('/customer/verifyOTP', VerifyOTPValidator.middleware, customerVerifyOTP);
 router.post('/customer/CustomerLogin', LoginValidator.middleware, customerLogin);
-router.patch('/customer/update/:id', CustomerAuthMiddleware, updateCustomerProfile);
+router.put('/customer/update/:id', upload.single('profilePicture'), handleMulterError, updateCustomerProfile);
 router.delete('/customer/delete/:id', CustomerAuthMiddleware, deleteCustomer);
 router.get('/customer/all', CustomerAuthMiddleware, getAllCustomers);
 router.get('/customer/:id', CustomerAuthMiddleware, getCustomerById);
 router.post('/customer/logout', CustomerAuthMiddleware, customerLogout);
-router.get('/customer/:id', getCustomerDetails);
+router.get('/customers/total', getTotalCustomers);
 
-// Define availability routes
+// Availability routes
 router.post('/availability/create', createAvailability);
 router.get('/availability/artist/:artistId', getAvailabilityByArtistId);
 router.get('/availability/service/:serviceId', getAvailabilityByServiceId);
@@ -110,7 +163,7 @@ router.patch('/availability/update/:id', updateAvailability);
 router.delete('/availability/delete/:id', deleteAvailability);
 router.get('/availability/all', getAllAvailability);
 
-// Define service routes
+// Service routes
 router.post('/service/create', createService);
 router.get('/service/all', getAllServices);
 router.get('/service/artist/:artistId', getServicesByArtistId);
@@ -118,15 +171,17 @@ router.get('/service/:id', getServiceById);
 router.patch('/service/update/:id', updateService);
 router.delete('/service/delete/:id', deleteService);
 
-// Define booking routes
-router.get('/bookings', getAllBookings); // Corrected from bookingRoute to router
-router.get('/bookings/artist/:artistId', getAllBookingsForArtist); // Corrected from bookingRoute to router
-router.get('/available-slots', getAvailableSlots); // Corrected from bookingRoute to router
-router.post('/newBooking', createBooking); // Corrected from bookingRoute to router
-router.patch('/update/:id', updateBooking); // Corrected from bookingRoute to router
-router.delete('/delete/:id', deleteBooking); // Corrected from bookingRoute to router
+// Booking routes
+router.get('/bookings', getAllBookings);
+router.get('/bookings/artist/:artistId', getAllBookingsForArtist);
+router.get('/bookings/customer/:customerId', getBookingsForCustomer);
+router.get('/available-slots', getAvailableSlots);
+router.post('/newBooking', createBooking);
+router.patch('/update/:id', updateBooking);
+router.patch('/bookings/delete/:id', deleteBooking);
+router.get('/bookings/customer/:customerId/canceled', getCanceledBookingsForCustomer);
 
-// Define payment routes
+// Payment routes
 router.post('/payment/initialize-khalti', initializeKhalti);
 router.get('/payment/complete-khalti-payment', completeKhaltiPayment);
 
