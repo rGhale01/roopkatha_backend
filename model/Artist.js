@@ -33,6 +33,7 @@ const ArtistSchema = new mongoose.Schema(
             required: [true, 'Gender is required'],
             enum: ['Male', 'Female'],
         }, // Gender field with enum validation
+        bio: {type: String, required: false},
     },
     { timestamps: true }
 );

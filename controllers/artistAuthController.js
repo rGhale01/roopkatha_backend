@@ -120,18 +120,31 @@ export const verifyOTP = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-    const { email, password, fcmToken } = req.body;
+    const { identifier, password, fcmToken } = req.body;
+
+    console.log('Login attempt with:', { identifier, password }); // Debug log
 
     try {
-        let artist = await ArtistModel.findOne({ email });
-        if (!artist) return ResponseHelper.validationResponse(res, {
-            email: ["No artist found"]
+        // Find artist by email or phoneNo using the identifier
+        let artist = await ArtistModel.findOne({
+            $or: [
+                { email: identifier }, // If identifier matches email
+                { phoneNo: identifier } // If identifier matches phone number
+            ]
         });
+        
+        if (!artist) {
+            return ResponseHelper.validationResponse(res, {
+                email: ["No artist found"]
+            });
+        }
 
         const isMatch = await bcrypt.compare(password, artist.password);
-        if (!isMatch) return ResponseHelper.validationResponse(res, {
-            password: ["INVALID credentials"]
-        });
+        if (!isMatch) {
+            return ResponseHelper.validationResponse(res, {
+                password: ["INVALID credentials"]
+            });
+        }
 
         if (!artist.KYCVerified) {
             return res.status(403).json({ error: "KYC verification is pending" });
@@ -159,9 +172,9 @@ export const login = async (req, res) => {
                 isVerified: artist.isVerified,
                 KYCVerified: artist.KYCVerified,
                 artistID: artist.artistID,
-                DOB: artist.DOB, // Added DOB
-                phoneNo: artist.phoneNo, // Added phoneNo
-                gender: artist.gender, // Added gender
+                DOB: artist.DOB, 
+                phoneNo: artist.phoneNo,
+                gender: artist.gender,
                 createdAt: artist.createdAt,
                 updatedAt: artist.updatedAt,
             },
@@ -178,17 +191,85 @@ export const updateProfile = async (req, res) => {
     const { id } = req.params;
     if (!isValidObjectId(id)) return res.status(400).json({ error: "Invalid Artist ID" });
 
-    const updateData = req.body;
-    if (req.file) updateData.profilePictureUrl = `http://10.0.2.2:8000/uploads/${req.file.filename}`;
-
     try {
-        const updatedArtist = await ArtistModel.findByIdAndUpdate(id, updateData, { new: true });
-        if (!updatedArtist) return res.status(404).json({ error: 'Artist not found' });
+        // Find the artist first to verify they exist
+        const artist = await ArtistModel.findById(id);
+        if (!artist) return res.status(404).json({ error: 'Artist not found' });
 
-        return res.json({ message: 'Profile updated successfully', artist: updatedArtist });
+        // Get update data from request body
+        const { name, email, phoneNo } = req.body;
+        
+        // Create update object with only fields that are provided
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (email) updateData.email = email;
+        if (phoneNo) updateData.phoneNo = phoneNo;
+
+        // Handle profile picture if file is uploaded
+        if (req.file) {
+            // Use 10.0.2.2 for Android emulator access
+            updateData.profilePictureUrl = `http://10.0.2.2:8000/uploads/${req.file.filename}`;
+            console.log('New profile picture URL:', updateData.profilePictureUrl);
+        }
+
+        // Update the artist in database
+        const updatedArtist = await ArtistModel.findByIdAndUpdate(
+            id, 
+            updateData, 
+            { new: true } // Return updated document
+        );
+
+        // Return success response with updated artist data
+        return res.status(200).json({ 
+            message: 'Profile updated successfully', 
+            artist: {
+                _id: updatedArtist._id,
+                name: updatedArtist.name,
+                email: updatedArtist.email,
+                phoneNo: updatedArtist.phoneNo,
+                profilePictureUrl: updatedArtist.profilePictureUrl,
+                DOB: updatedArtist.DOB,
+                gender: updatedArtist.gender
+                // Add any other fields you want to return
+            }
+        });
     } catch (err) {
         console.error('Error updating artist:', err);
-        return res.status(500).json({ error: 'Error updating artist' });
+        return res.status(500).json({ error: 'Error updating artist profile' });
+    }
+};
+
+// Add this new function to your artistAuthController.js
+export const updateBio = async (req, res) => {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) return res.status(400).json({ error: "Invalid Artist ID" });
+
+    const { bio } = req.body;
+    if (bio === undefined) {
+        return res.status(400).json({ error: "Bio content is required" });
+    }
+
+    try {
+        const updatedArtist = await ArtistModel.findByIdAndUpdate(
+            id, 
+            { bio }, 
+            { new: true }
+        );
+
+        if (!updatedArtist) {
+            return res.status(404).json({ error: 'Artist not found' });
+        }
+
+        return res.status(200).json({ 
+            message: 'Bio updated successfully', 
+            artist: {
+                _id: updatedArtist._id,
+                bio: updatedArtist.bio
+            }
+        });
+    } catch (err) {
+        console.error('Error updating artist bio:', err);
+        return res.status(500).json({ error: 'Error updating artist bio' });
     }
 };
 
@@ -275,19 +356,35 @@ export const logout = async (req, res) => {
     }
   };
 
-  export const uploadKYC = async (req, res) => {
+
+export const uploadKYC = async (req, res) => {
     const { id } = req.params;
     if (!isValidObjectId(id)) return res.status(400).json({ error: "Invalid Artist ID" });
 
+    // Check if files were uploaded successfully
+    if (!req.files || !req.files.citizenship || !req.files.pan) {
+        return res.status(400).json({ error: "Both Citizenship and PAN documents are required" });
+    }
+
     const updateData = {};
-    if (req.files.citizenship) updateData.citizenshipFilePath = `http://localhost:8000/uploads/${req.files.citizenship[0].filename}`;
-    if (req.files.pan) updateData.panFilePath = `http://localhost:8000/uploads/${req.files.pan[0].filename}`;
+    
+    // Use 10.0.2.2 instead of localhost for the URLs when accessing from Android emulator
+    if (req.files.citizenship) {
+        updateData.citizenshipFilePath = `http://10.0.2.2:8000/uploads/${req.files.citizenship[0].filename}`;
+    }
+    
+    if (req.files.pan) {
+        updateData.panFilePath = `http://10.0.2.2:8000/uploads/${req.files.pan[0].filename}`;
+    }
 
     try {
         const updatedArtist = await ArtistModel.findByIdAndUpdate(id, updateData, { new: true });
         if (!updatedArtist) return res.status(404).json({ error: 'Artist not found' });
 
-        return res.json({ message: 'KYC documents uploaded successfully', artist: updatedArtist });
+        return res.json({ 
+            message: 'KYC documents uploaded successfully', 
+            artist: updatedArtist 
+        });
     } catch (err) {
         console.error('Error uploading KYC documents:', err);
         return res.status(500).json({ error: 'Error uploading KYC documents' });

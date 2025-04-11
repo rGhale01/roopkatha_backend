@@ -17,7 +17,8 @@ import {
     getTotalVerifiedArtists,
     getTotalUnverifiedArtists,
     getVerifyArtistById,
-    logout as artistLogout
+    logout as artistLogout,
+    updateBio
 } from './controllers/artistAuthController.js';
 
 import {
@@ -143,6 +144,7 @@ router.post('/upload-kyc/:id', upload.fields([
 router.get('/unverified', getUnverifiedArtists);
 router.put('/verify/:id', verifyArtist);
 router.get('/Verify/:id', getVerifyArtistById);
+router.patch('/artist/update-bio/:id', updateBio);
 
 // Customer routes
 router.post('/customer/CustomerRegister', RegisterValidator.middleware, customerRegister);
